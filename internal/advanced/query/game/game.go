@@ -9,6 +9,7 @@ import (
 type Interface interface {
 	InsertGameQuery(game gameModel.Game) *goqu.InsertDataset
 	GetGames(perPage uint, page uint) *goqu.SelectDataset
+	GetGameByID(id int) *goqu.SelectDataset
 	FilterByStatus(b *goqu.SelectDataset, s []string) *goqu.SelectDataset
 	FilterByPlatform(b *goqu.SelectDataset, p []string) *goqu.SelectDataset
 	FilterByDeletedStatus(b *goqu.SelectDataset, d []string) *goqu.SelectDataset
@@ -103,6 +104,19 @@ func (q Query) FilterByDeletedStatus(
 		b = b.Prepared(true)
 	}
 	return b
+}
+func (q Query) GetGameByID(id int) *goqu.SelectDataset {
+	b := q.Tools.Query().Select(
+		"created_at",
+		"id",
+		"title",
+		"url",
+		"platform",
+		"description",
+		"status",
+		"is_deleted",
+	).Where(goqu.Ex{"id": id}).Limit(1)
+	return b.Prepared(true)
 }
 func (q Query) GetGameCount(deletedStatus []string) *goqu.SelectDataset {
 	b := q.Tools.Query().Select(goqu.COUNT("*"))

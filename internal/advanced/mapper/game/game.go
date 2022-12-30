@@ -14,10 +14,18 @@ func InsertGameRequestToGame(r gameDTO.InsertGameRequest) gameModel.Game {
 	g.Title = r.Title
 	g.Url = r.Url
 	g.Description = r.Description
-	g.Platform = r.Platform
+	g.Platform = strings.ToUpper(r.Platform)
 	g.Status = gameStatus.NotRegistered.Type
 
 	return g
+}
+func QueryParamToID(c echo.Context) int {
+	var id int
+	idParam := c.Param("id")
+	if idParam != "" {
+		id, _ = strconv.Atoi(idParam)
+	}
+	return id
 }
 
 func QueryParamToGamesFilterRequest(
@@ -25,21 +33,12 @@ func QueryParamToGamesFilterRequest(
 ) gameDTO.GetGamesFilterRequest {
 	var req gameDTO.GetGamesFilterRequest
 
-	title := c.QueryParam("title")
-	if title != "" {
-		req.Title = title
-	}
-	url := c.QueryParam("url")
-	if url != "" {
-		req.Url = url
-	}
+	req.Title = c.QueryParam("title")
+	req.Url = c.QueryParam("url")
+	req.Description = c.QueryParam("description")
 	platform := c.QueryParam("platform")
 	if platform != "" {
 		req.Platform = strings.Split(platform, ",")
-	}
-	description := c.QueryParam("description")
-	if description != "" {
-		req.Description = description
 	}
 	status := c.QueryParam("status")
 	if status != "" {
@@ -56,6 +55,40 @@ func QueryParamToGamesFilterRequest(
 	page := c.QueryParam("page")
 	if page != "" {
 		req.Page, _ = strconv.Atoi(page)
+	}
+
+	return req
+}
+
+func QueryParamUpdateToGame(
+	c echo.Context,
+	r gameDTO.UpdateGameRequest,
+	g gameModel.Game,
+) gameModel.Game {
+	var req gameModel.Game
+
+	id := c.Param("id")
+	if id != "" {
+		req.ID, _ = strconv.Atoi(id)
+	}
+	req.Title = r.Title
+	if req.Title == "" {
+		req.Title = g.Title
+	}
+	req.Url = r.Url
+	if req.Url == "" {
+		req.Url = g.Url
+	}
+	req.Description = r.Description
+	if req.Description == "" {
+		req.Description = g.Description
+	}
+	req.Platform = strings.ToUpper(r.Platform)
+	if req.Platform == "" {
+		req.Platform = g.Platform
+	}
+	if req.Status == "" {
+		req.Status = g.Status
 	}
 
 	return req

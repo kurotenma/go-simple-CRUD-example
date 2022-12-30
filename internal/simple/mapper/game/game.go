@@ -72,7 +72,6 @@ func GameToGameResponse(game gameModel.Game) gameDTO.GetGameResponse {
 	g.IsDeleted = game.IsDeleted
 	return g
 }
-
 func GamesToGamesResponse(games gameModel.Games) gameDTO.GetGamesResponse {
 	gms := gameDTO.GetGamesResponse{}
 	for i := range games {
@@ -80,4 +79,46 @@ func GamesToGamesResponse(games gameModel.Games) gameDTO.GetGamesResponse {
 		gms = append(gms, g)
 	}
 	return gms
+}
+func QueryParamToID(c echo.Context) int {
+	var id int
+	idParam := c.Param("id")
+	if idParam != "" {
+		id, _ = strconv.Atoi(idParam)
+	}
+	return id
+}
+
+func QueryParamUpdateToGame(
+	c echo.Context,
+	r gameDTO.UpdateGameRequest,
+	g gameModel.Game,
+) gameModel.Game {
+	var req gameModel.Game
+
+	id := c.Param("id")
+	if id != "" {
+		req.ID, _ = strconv.Atoi(id)
+	}
+	req.Title = r.Title
+	if req.Title == "" {
+		req.Title = g.Title
+	}
+	req.Url = r.Url
+	if req.Url == "" {
+		req.Url = g.Url
+	}
+	req.Description = r.Description
+	if req.Description == "" {
+		req.Description = g.Description
+	}
+	req.Platform = strings.ToUpper(r.Platform)
+	if req.Platform == "" {
+		req.Platform = g.Platform
+	}
+	if req.Status == "" {
+		req.Status = g.Status
+	}
+
+	return req
 }

@@ -6,17 +6,21 @@ import (
 	"golang-ecommerce-example/internal/advanced/model/game"
 	"golang-ecommerce-example/internal/advanced/query/game"
 	dbPkg "golang-ecommerce-example/pkg/db"
+	errorTools "golang-ecommerce-example/pkg/error"
 )
 
 type Interface interface {
 	InsertGame(game gameModel.Game) (gameModel.Game, error)
 	GetGames(filter gameDTO.GetGamesFilterRequest) (gameModel.Games, error)
+	GetGame(id int) (gameModel.Game, error)
 	GetGameCount(deletedStatus []string) (int, error)
+	UpdateGame(g gameModel.Game) error
 }
 
 type Repository struct {
 	*dbPkg.Types
-	Query gameQuery.Interface
+	Query  gameQuery.Interface
+	ErrMsg errorTools.Enum
 }
 
 func NewRepository(db *dbPkg.Types) Interface {
@@ -30,11 +34,15 @@ func (r Repository) InsertGame(g gameModel.Game) (gameModel.Game, error) {
 	b := r.Query.InsertGameQuery(g)
 	q, args, err := b.ToSQL()
 	if err != nil {
-		return g, err
+		r.ErrMsg = errorTools.ErrBuildQuery
+		r.ErrMsg.AddMessage(err)
+		return g, r.ErrMsg.Error
 	}
 	err = r.DB.QueryRow(context.Background(), q, args...).Scan(&g.ID)
 	if err != nil {
-		return g, err
+		r.ErrMsg = errorTools.ErrExecQuery
+		r.ErrMsg.AddMessage(err)
+		return g, r.ErrMsg.Error
 	}
 	return g, nil
 }
@@ -67,11 +75,15 @@ func (r Repository) GetGames(f gameDTO.GetGamesFilterRequest) (
 	}
 	q, args, err := b.ToSQL()
 	if err != nil {
-		return gs, err
+		r.ErrMsg = errorTools.ErrBuildQuery
+		r.ErrMsg.AddMessage(err)
+		return gs, r.ErrMsg.Error
 	}
 	rows, err := r.DB.Query(context.Background(), q, args...)
 	if err != nil {
-		return gs, err
+		r.ErrMsg = errorTools.ErrExecQuery
+		r.ErrMsg.AddMessage(err)
+		return gs, r.ErrMsg.Error
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -92,29 +104,62 @@ func (r Repository) GetGames(f gameDTO.GetGamesFilterRequest) (
 	}
 	return gs, nil
 }
+func (r Repository) GetGame(id int) (gameModel.Game, error) {
+	var g gameModel.Game
+	b := r.Query.GetGameByID(id)
+	q, args, err := b.ToSQL()
+	if err != nil {
+		r.ErrMsg = errorTools.ErrBuildQuery
+		r.ErrMsg.AddMessage(err)
+		return g, r.ErrMsg.Error
+	}
+	if err = r.DB.QueryRow(context.Background(), q, args...).Scan(
+		&g.CreatedAt,
+		&g.ID,
+		&g.Title,
+		&g.Url,
+		&g.Platform,
+		&g.Description,
+		&g.Status,
+		&g.IsDeleted,
+	); err != nil {
+		r.ErrMsg = errorTools.ErrExecQuery
+		r.ErrMsg.AddMessage(err)
+		return g, r.ErrMsg.Error
+	}
+	return g, nil
+}
 func (r Repository) GetGameCount(deletedStatus []string) (int, error) {
 	var count int
 	b := r.Query.GetGameCount(deletedStatus)
 	q, args, err := b.ToSQL()
 	if err != nil {
-		return 0, err
+		r.ErrMsg = errorTools.ErrBuildQuery
+		r.ErrMsg.AddMessage(err)
+		return 0, r.ErrMsg.Error
 	}
 	err = r.DB.QueryRow(context.Background(), q, args...).Scan(&count)
 	if err != nil {
-		return 0, err
+		r.ErrMsg = errorTools.ErrExecQuery
+		r.ErrMsg.AddMessage(err)
+		return 0, r.ErrMsg.Error
 	}
 
 	return count, nil
 }
-func (r Repository) UpdateGame(g gameModel.Game) (gameModel.Game, error) {
+func (r Repository) UpdateGame(g gameModel.Game) error {
 	b := r.Query.UpdateGame(g)
 	q, args, err := b.ToSQL()
 	if err != nil {
-		return g, err
+		r.ErrMsg = errorTools.ErrBuildQuery
+		r.ErrMsg.AddMessage(err)
+		return r.ErrMsg.Error
 	}
-	_, err = r.DB.Exec(context.Background(), q, args)
+	_, err = r.DB.Exec(context.Background(), q, args...)
 	if err != nil {
-		return g, err
+		r.ErrMsg = errorTools.ErrExecQuery
+		r.ErrMsg.AddMessage(err)
+		return r.ErrMsg.Error
 	}
-	return g, nil
+	return nil
 }

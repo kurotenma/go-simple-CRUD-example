@@ -22,14 +22,18 @@ func SelectIsNotDeleted(b *goqu.SelectDataset, t string) *goqu.SelectDataset {
 func SelectIsDeleted(b *goqu.SelectDataset, t string) *goqu.SelectDataset {
 	return b.Where(goqu.ExOr{t + ".is_deleted": true})
 }
-
+func UpdateIsNotDeleted(b *goqu.UpdateDataset, t string) *goqu.UpdateDataset {
+	isDeleted := "is_deleted"
+	if t != "" {
+		isDeleted = t + ".is_deleted"
+	}
+	expr := goqu.Ex{isDeleted: false}
+	return b.Where(expr)
+}
 func DeleteIsDeleted(t string) {
 	isDeleted := "is_deleted"
 	if t != "" {
 		isDeleted = t + ".is_deleted"
 	}
 	fmt.Println(isDeleted)
-	//expr := goqu.Ex{isDeleted: false}
-	//b = b.Where(expr)
-	//return b
 }

@@ -6,7 +6,17 @@ type InsertGameRequest struct {
 	Platform    string `form:"platform" validate:"required"`
 	Description string `form:"description" validate:"required"`
 }
+type UpdateGameRequest struct {
+	ID          int    `param:"id"`
+	Title       string `form:"title"`
+	Url         string `form:"url"`
+	Platform    string `form:"platform"`
+	Description string `form:"description"`
+}
 
+type VerifyGameRequest struct {
+	ID int `param:"id"`
+}
 type GetGamesFilterRequest struct {
 	Title         string   `form:"title"`
 	Url           string   `form:"url"`

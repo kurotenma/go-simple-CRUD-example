@@ -1,7 +1,6 @@
 package gameQuery
 
 import (
-	"fmt"
 	"github.com/doug-martin/goqu/v9"
 	"golang-ecommerce-example/internal/simple/model/game"
 	queryTools "golang-ecommerce-example/pkg/query-simple"
@@ -22,8 +21,6 @@ func InsertGameQuery(g gameModel.Game) *goqu.InsertDataset {
 		"status":      g.Status,
 		"is_deleted":  g.IsDeleted,
 	}
-
-	fmt.Println("db : ", db)
 	b := db.Insert().Rows(r).Returning("id")
 	return b.Prepared(true)
 }
@@ -85,7 +82,19 @@ func FilterByDeletedStatus(
 	}
 	return b
 }
-
+func GetGameByID(id int) *goqu.SelectDataset {
+	b := db.Select(
+		"created_at",
+		"id",
+		"title",
+		"url",
+		"platform",
+		"description",
+		"status",
+		"is_deleted",
+	).Where(goqu.Ex{"id": id}).Limit(1)
+	return b.Prepared(true)
+}
 func GetGameCount(deletedStatus []string) *goqu.SelectDataset {
 	b := db.Select(goqu.COUNT("*"))
 	if len(deletedStatus) < 2 {
@@ -98,4 +107,20 @@ func GetGameCount(deletedStatus []string) *goqu.SelectDataset {
 		}
 	}
 	return b.Prepared(true)
+}
+func UpdateGame(g gameModel.Game) *goqu.UpdateDataset {
+	r := goqu.Record{
+		"updated_at":  g.UpdatedAt,
+		"title":       g.Title,
+		"url":         g.Url,
+		"platform":    g.Platform,
+		"description": g.Description,
+		"status":      g.Status,
+		"is_deleted":  g.IsDeleted,
+	}
+	b := db.Update().Set(r)
+	b = queryTools.UpdateIsNotDeleted(b, gameTable)
+	b = b.Where(goqu.Ex{"id": g.ID})
+	//b = q.Tools.UpdateIsNotDeleted(b, gameTable)
+	return b
 }

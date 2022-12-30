@@ -4,12 +4,15 @@ import (
 	"context"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
+	gameValidator "golang-ecommerce-example/internal/advanced/validator/game"
 	commonData "golang-ecommerce-example/internal/simple/DTO/common"
 	gameDTO "golang-ecommerce-example/internal/simple/DTO/game"
+	gameStatus "golang-ecommerce-example/internal/simple/enum/game/status"
 	gameMapper "golang-ecommerce-example/internal/simple/mapper/game"
 	gameModel "golang-ecommerce-example/internal/simple/model/game"
 	gameQuery "golang-ecommerce-example/internal/simple/query/game"
 	dbPkg "golang-ecommerce-example/pkg/db"
+	validatorTools "golang-ecommerce-example/pkg/validator"
 	"net/http"
 )
 
@@ -18,8 +21,8 @@ func InsertGame(ctx echo.Context) error {
 	if err := ctx.Bind(&req); err != nil {
 		return ctx.JSON(http.StatusInternalServerError, err.Error())
 	}
-	validator := validator.New()
-	if err := validator.Struct(req); err != nil {
+	v := validator.New()
+	if err := v.Struct(req); err != nil {
 		return ctx.JSON(http.StatusInternalServerError, err.Error())
 	}
 
@@ -39,7 +42,6 @@ func InsertGame(ctx echo.Context) error {
 	go db.Exec(context.Background(), q, args...)
 	return ctx.JSON(http.StatusOK, "Ok")
 }
-
 func GetGames(ctx echo.Context) error {
 	var req gameDTO.GetGamesFilterRequest
 	var games gameModel.Games
@@ -47,8 +49,8 @@ func GetGames(ctx echo.Context) error {
 	if err := ctx.Bind(&req); err != nil {
 		return ctx.JSON(http.StatusInternalServerError, err.Error())
 	}
-	validator := validator.New()
-	if err := validator.Struct(req); err != nil {
+	v := validator.New()
+	if err := v.Struct(req); err != nil {
 		return ctx.JSON(http.StatusInternalServerError, err.Error())
 	}
 
@@ -123,4 +125,143 @@ func GetGames(ctx echo.Context) error {
 		TotalData: count,
 		Message:   "Ok",
 	})
+}
+func GetGame(ctx echo.Context) error {
+	var g gameModel.Game
+	gameID := gameMapper.QueryParamToID(ctx)
+	if gameID == 0 {
+		return ctx.JSON(http.StatusInternalServerError, "id is required")
+	}
+	db, err := dbPkg.InitPgx()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	b := gameQuery.GetGameByID(gameID)
+	q, args, err := b.ToSQL()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+	if err := db.QueryRow(context.Background(), q, args...).Scan(
+		&g.CreatedAt,
+		&g.ID,
+		&g.Title,
+		&g.Url,
+		&g.Platform,
+		&g.Description,
+		&g.Status,
+		&g.IsDeleted,
+	); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+	return ctx.JSON(http.StatusOK, commonData.CommonData{
+		Data:      g,
+		DataCount: 1,
+		TotalData: 1,
+		Message:   "Ok",
+	})
+}
+func VerifyGame(ctx echo.Context) error {
+	var req gameDTO.VerifyGameRequest
+	var g gameModel.Game
+
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+	validator := validatorTools.NewValidator()
+	if err := validator.Validate(req); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+	gv := gameValidator.NewValidator()
+	if err := gv.ValidateGameID(req.ID); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	db, err := dbPkg.InitPgx()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	b := gameQuery.GetGameByID(req.ID)
+	q, args, err := b.ToSQL()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+	if err := db.QueryRow(context.Background(), q, args...).Scan(
+		&g.CreatedAt,
+		&g.ID,
+		&g.Title,
+		&g.Url,
+		&g.Platform,
+		&g.Description,
+		&g.Status,
+		&g.IsDeleted,
+	); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+
+	if g.Status == gameStatus.Registered.Type {
+		return ctx.JSON(http.StatusInternalServerError, "No Change")
+	}
+	g.UpdatedData()
+	g.Status = gameStatus.Registered.Type
+	b2 := gameQuery.UpdateGame(g)
+	q, args, err = b2.ToSQL()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+	go db.Exec(context.Background(), q, args...)
+
+	return ctx.JSON(http.StatusOK, "Game Successfully Updated !")
+}
+func UpdateGame(ctx echo.Context) error {
+	var req gameDTO.UpdateGameRequest
+	var g gameModel.Game
+
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+	validator := validatorTools.NewValidator()
+	if err := validator.Validate(req); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+	gv := gameValidator.NewValidator()
+	if err := gv.ValidateGameID(req.ID); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+	db, err := dbPkg.InitPgx()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	b := gameQuery.GetGameByID(req.ID)
+	q, args, err := b.ToSQL()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+	if err := db.QueryRow(context.Background(), q, args...).Scan(
+		&g.CreatedAt,
+		&g.ID,
+		&g.Title,
+		&g.Url,
+		&g.Platform,
+		&g.Description,
+		&g.Status,
+		&g.IsDeleted,
+	); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+	g = gameMapper.QueryParamUpdateToGame(ctx, req, g)
+	g.UpdatedData()
+	b2 := gameQuery.UpdateGame(g)
+	q, args, err = b2.ToSQL()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+	_, err = db.Exec(context.Background(), q, args...)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err)
+	}
+
+	return ctx.JSON(http.StatusOK, "Game Successfully Updated !")
 }

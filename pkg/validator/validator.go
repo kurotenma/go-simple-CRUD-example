@@ -8,6 +8,10 @@ type CustomValidator struct {
 	Validator *validator.Validate
 }
 
+func NewValidator() *CustomValidator {
+	return &CustomValidator{Validator: validator.New()}
+}
+
 func (cv *CustomValidator) Validate(i interface{}) error {
 	if err := cv.Validator.Struct(i); err != nil {
 		// Optionally, you could return the error to give each route more control over the status code
@@ -20,7 +24,4 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 		return err
 	}
 	return nil
-}
-func NewValidator() *CustomValidator {
-	return &CustomValidator{Validator: validator.New()}
 }

@@ -1,5 +1,7 @@
 package errorTools
 
+import "errors"
+
 type Enum struct {
 	Type       string
 	Error      error
@@ -17,6 +19,15 @@ func (e *Enum) Empty() {
 	e.Error = nil
 	e.StatusCode = 0
 }
+
+func (e *Enum) AddMessage(err error) {
+	e.Error = errors.New(e.Error.Error() + " : " + err.Error())
+}
+
+func (e *Enum) Message() string {
+	return e.Error.Error()
+}
+
 func (e *Enum) JSONResponse() (int, ErrorResponse) {
 	var err ErrorStruct
 	err.ErrorEnum = *e
@@ -61,6 +72,7 @@ func (e *ErrorStruct) AddFunctionName(function string) {
 func (e *ErrorStruct) AddMessage(msg string) {
 	e.Message += " : " + msg
 }
+
 func (e *ErrorStruct) IsNotEmpty() bool {
 	if e.Message == "" && !e.ErrorEnum.IsNotEmpty() {
 		return false

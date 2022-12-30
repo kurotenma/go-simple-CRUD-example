@@ -8,10 +8,15 @@ type InsertGameRequest struct {
 }
 
 type UpdateGameRequest struct {
-	Title       string `form:"title" validate:"required"`
+	ID          int    `param:"id"`
+	Title       string `form:"title"`
 	Url         string `form:"url"`
-	Platform    string `form:"platform" validate:"required"`
-	Description string `form:"description" validate:"required"`
+	Platform    string `form:"platform"`
+	Description string `form:"description"`
+}
+
+type VerifyGameRequest struct {
+	ID int `param:"id"`
 }
 
 type GetGamesFilterRequest struct {
